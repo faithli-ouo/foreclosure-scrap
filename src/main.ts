@@ -1,17 +1,22 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppService } from './app.service';
+import { ScrapService } from './scrap/scrap.service';
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-  //get the entire app service
+  const app = await NestFactory.create(AppModule);
+
+  // Get the AppService
   const appService = app.get(AppService);
+  await appService.startApp();
 
-  console.log('app start', await appService.gosite());
-  console.log('get totol record', await appService.getDataTable());
+  // Get the ScrapService
+  const scrapService = app.get(ScrapService);
 
-  console.log('app finish');
-
-  return app.close();
+  await scrapService.openBrowser();
+  await scrapService.goForeclosure();
+  await scrapService.getPageInfo();
+  scrapService.closeDriver();
 }
+
 bootstrap();
