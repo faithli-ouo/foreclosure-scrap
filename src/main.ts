@@ -15,7 +15,9 @@ async function bootstrap() {
 
   await scrapService.openBrowser();
   await scrapService.goForeclosure();
-  await scrapService.getPageInfo();
+  const total_info = await scrapService.getPageInfo();
+  await scrapService.getAllForeclosurettableData(total_info);
+
   scrapService.closeDriver();
 }
 
