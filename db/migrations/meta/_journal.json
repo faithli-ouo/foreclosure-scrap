@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1725163731124,
+      "tag": "0000_material_the_fallen",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1725164266811,
+      "tag": "0001_tiresome_mindworm",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1725171109755,
+      "tag": "0002_strange_lightspeed",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1725183357338,
+      "tag": "0003_demonic_firelord",
+      "breakpoints": true
+    }
+  ]
+}

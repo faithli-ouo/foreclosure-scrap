@@ -1,0 +1,1 @@
+ALTER TABLE "foreclosure" ALTER COLUMN "case_number" SET NOT NULL;

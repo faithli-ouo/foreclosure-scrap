@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Builder, By, until } from 'selenium-webdriver';
 import { DateTime } from 'luxon';
+import { PGDataService } from 'src/pg-data/pg-data.service';
 
 export type total_info = {
   total_page: number;
@@ -36,7 +37,7 @@ export type foreclosure_item_row = {
   empty: string;
   is_unregistered_building: boolean;
   marking: string;
-  remark: string;
+  remark?: string;
 };
 
 //define selenium driver and the target url
@@ -45,6 +46,8 @@ const site_url = 'https://aomp109.judicial.gov.tw/judbp/wkw/WHD1A02.htm';
 
 @Injectable()
 export class ScrapService {
+  constructor(private readonly PGDataService: PGDataService) {}
+
   //1. Init Selenium Browser and Go To Site Url
   async openBrowser(): Promise<void> {
     try {
@@ -197,11 +200,13 @@ export class ScrapService {
             const cell_date = cell4_parts[0].split('/');
             rowData = {
               ...rowData,
-              bid_date: DateTime.fromSQL(
-                `${parseInt(cell_date[0]) + 1911}-${cell_date[1]}-${cell_date[2]}`,
-              )
-                .toUTC()
-                .toISO(),
+              bid_date: new Date(
+                DateTime.fromSQL(
+                  `${parseInt(cell_date[0]) + 1911}-${cell_date[1]}-${cell_date[2]}`,
+                )
+                  .toUTC()
+                  .toISO(),
+              ),
               bid_times: parseInt(cell4_parts[1].match(/\d+/)[0]),
             };
             break;
@@ -304,8 +309,9 @@ export class ScrapService {
           default:
             break;
         }
-        console.log(imageExist);
       }
+      console.log(imageExist);
+      await this.PGDataService.postForeclosureItem(rowData);
     }
   }
 
