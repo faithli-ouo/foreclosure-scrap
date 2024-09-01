@@ -14,10 +14,10 @@ import postgres = require('postgres');
         const connection = `postgres://${configService.get('PG_USER')}:${configService.get('PG_PASSWORD')}@${configService.get('PG_HOST')}:${configService.get('PG_PORT')}/${configService.get('PG_DB')}`;
         const sql = postgres(connection, {
           onnotice: () => {},
-          debug: (connection, query, params) => {
-            console.log('SQL Query:', query);
-            console.log('Parameters:', params);
-          },
+          // debug: (connection, query, params) => {
+          //   console.log('SQL Query:', query);
+          //   console.log('Parameters:', params);
+          // },
         });
 
         return drizzle(sql);

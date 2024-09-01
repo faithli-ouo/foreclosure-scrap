@@ -311,7 +311,7 @@ export class ScrapService {
         }
       }
       console.log(imageExist);
-      await this.PGDataService.postForeclosureItem(rowData);
+      await this.PGDataService.upsertForeclosureItem(rowData);
     }
   }
 

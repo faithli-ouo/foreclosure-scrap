@@ -29,6 +29,27 @@
       "when": 1725183357338,
       "tag": "0003_demonic_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1725197817874,
+      "tag": "0004_fresh_bloodaxe",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1725198880924,
+      "tag": "0005_blue_miek",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1725201898536,
+      "tag": "0006_thick_nebula",
+      "breakpoints": true
     }
   ]
 }

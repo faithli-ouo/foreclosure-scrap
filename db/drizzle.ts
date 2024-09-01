@@ -8,10 +8,10 @@ const connection: string = `postgres://${process.env.PG_USER}:${process.env.PG_P
 
 const sql = postgres(connection, {
   onnotice: () => {},
-  debug: (connection, query, params) => {
-    console.log('SQL Query:', query);
-    console.log('Parameters:', params);
-  },
+  // debug: (connection, query, params) => {
+  //   console.log('SQL Query:', query);
+  //   console.log('Parameters:', params);
+  // },
 });
 
 export const db = drizzle(sql);

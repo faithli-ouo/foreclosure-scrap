@@ -1,0 +1,1 @@
+ALTER TABLE "foreclosure" ALTER COLUMN "square_meter" SET DATA TYPE numeric;
