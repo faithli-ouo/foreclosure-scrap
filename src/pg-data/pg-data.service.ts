@@ -1,14 +1,15 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from 'db/schema'; // Ensure this path is correct
-import { eq, and, count, gte } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { foreclosure_item_row } from 'src/scrap/scrap.service';
 
 type DrizzleDB = PostgresJsDatabase<typeof schema>;
 
 @Injectable()
 export class PGDataService {
   constructor(@Inject('DRIZZLE_ORM') private readonly db: DrizzleDB) {}
-  async upsertForeclosureItem(rowData): Promise<unknown> {
+  async upsertForeclosureItem(rowData: foreclosure_item_row): Promise<string> {
     //Fetch Data from DB
     const res = await this.db
       .select()
@@ -22,6 +23,7 @@ export class PGDataService {
           eq(schema.foreclosure.bid_date, rowData.bid_date),
           eq(schema.foreclosure.bid_times, rowData.bid_times),
           eq(schema.foreclosure.marking, rowData.marking),
+          eq(schema.foreclosure.type, rowData.type),
         ),
       );
 
@@ -69,6 +71,7 @@ export class PGDataService {
     return res[0].updatedId;
   }
 
+  //Compare Two Set of Object
   async compareJsonSameKeys(
     orgData,
     newData,
