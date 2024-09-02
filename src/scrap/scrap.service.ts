@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Builder, By, until } from 'selenium-webdriver';
 import { DateTime } from 'luxon';
 import { PGDataService } from 'src/pg-data/pg-data.service';
+import { ObjectHandelService } from 'src/object-handel/object-handel.service';
 
 export type total_info = {
   total_page: number;
@@ -46,7 +47,10 @@ const site_url = 'https://aomp109.judicial.gov.tw/judbp/wkw/WHD1A02.htm';
 
 @Injectable()
 export class ScrapService {
-  constructor(private readonly PGDataService: PGDataService) {}
+  constructor(
+    private readonly PGDataService: PGDataService,
+    private readonly minio: ObjectHandelService,
+  ) {}
 
   //1. Init Selenium Browser and Go To Site Url
   async openBrowser(): Promise<void> {
@@ -118,10 +122,7 @@ export class ScrapService {
       console.log(`Page: ${page} Finish Scarping`);
 
       if (page !== total_info.total_page) {
-        const nextPage_btn = await driver.wait(
-          until.elementLocated(By.css('.fa-caret-right')),
-        );
-        nextPage_btn.click();
+        await this.nextpage();
       }
     }
   }
@@ -312,10 +313,141 @@ export class ScrapService {
       }
       console.log(imageExist);
       await this.PGDataService.upsertForeclosureItem(rowData);
+
+      if (imageExist) {
+        //Find Is Bucket Exist or Not
+        const bucketExist = await this.minio.findBucket(rowData.case_number);
+
+        //If Exist Break the loop
+        if (bucketExist) {
+          console.log(`${rowData.case_number}' Images have been uploaded`);
+          continue;
+        }
+        await this.scarp_images(rowData.case_number, row);
+      }
+    }
+  }
+
+  async scarp_images(case_number: string, row: any): Promise<void> {
+    let imagesPath: string[] | [] = [];
+
+    const imageButton = await row.findElement(
+      By.css('td#picTd button[title="查看照片"]'),
+    );
+
+    // Wait for the button to be both visible and enabled
+    await driver.wait(until.elementIsVisible(imageButton), 5000);
+
+    // Scroll the button into view to ensure it's clickable
+    await driver.executeScript(
+      'arguments[0].scrollIntoView(true);',
+      imageButton,
+    );
+
+    // Add a small delay to allow any animations to complete
+    await driver.sleep(500);
+
+    // Click the button
+    await imageButton.click();
+    try {
+      // Store the original window handle
+      const originalWindow = await driver.getWindowHandle();
+      // Switch to the new window
+      await this.switchWindow();
+      // Switch to the 'v1' frame and scrape images
+      const iframe = await driver.wait(until.elementLocated(By.name('v1')));
+      await driver.switchTo().frame(iframe);
+
+      //Fetch Image
+      try {
+        await driver.wait(
+          until.elementLocated(By.css('#tablecontext tbody')),
+          2000,
+        );
+        await driver.sleep(1000);
+        const total_info = await this.getPageInfo();
+        console.log('Images - ' + case_number + ': ' + total_info.total_record);
+
+        for (let page = 1; page <= total_info.total_page; page++) {
+          // Wait for the image elements to be located
+          const image_elements = await driver.findElements(
+            By.xpath(
+              '//img[contains(@src, "/judkp/wkp/PHD1A01/IMAGES.htm?picture=")]',
+            ),
+          );
+          // Iterate over the located elements
+          for (const [i, image] of image_elements.entries()) {
+            // Get the 'src' attribute of each image
+            const imageSrc = await image.getAttribute('src');
+            console.log(imageSrc);
+            console.log(`Images - ${case_number}: ${i + 1} Upload`);
+
+            const imagePath = await this.minio.fetchOpUploadImages(
+              imageSrc,
+              case_number,
+            );
+
+            imagesPath = [...imagesPath, imagePath];
+          }
+
+          if (page !== total_info.total_page) {
+            await this.nextpage();
+            await driver.wait(
+              until.elementLocated(By.css('#tablecontext tbody')),
+              2000,
+            );
+            await driver.sleep(1000);
+          }
+        }
+        // Finish Scarp Image
+        console.log('Finsih Scrap All Images - ' + case_number);
+        console.log('Close Popup Window');
+      } catch (e) {
+        console.error(e);
+      }
+
+      // Close the current window
+      await driver.close();
+      // Switch back to the original window
+      await driver.switchTo().window(originalWindow);
+      // Now switch to the 'v2' frame in the original window
+      await driver.switchTo().defaultContent(); // First, ensure we're at the top level
+      const iframe2 = await driver.wait(until.elementLocated(By.name('v2')));
+      await driver.switchTo().frame(iframe2);
+    } catch (error) {
+      console.error(error);
+      // If an error occurs, make sure we're back in the original window
+      const windows = await driver.getAllWindowHandles();
+      await driver.switchTo().window(windows[0]);
+      await driver.switchTo().defaultContent();
+      const iframe2 = await driver.wait(until.elementLocated(By.name('v2')));
+      await driver.switchTo().frame(iframe2);
     }
   }
 
   closeDriver(): void {
     driver.close();
+  }
+
+  async nextpage(): Promise<void> {
+    const nextPage_btn = await driver.wait(
+      until.elementLocated(By.css('.fa-caret-right')),
+    );
+    nextPage_btn.click();
+  }
+
+  async switchWindow() {
+    try {
+      const currentWindowHandle = await driver.getWindowHandle();
+      const allWindowHandles = await driver.getAllWindowHandles();
+      const otherWindowHandle = allWindowHandles.find(
+        (handle) => handle !== currentWindowHandle,
+      );
+      if (otherWindowHandle) {
+        await driver.switchTo().window(otherWindowHandle);
+      }
+    } catch (e) {
+      console.log('error: ' + e);
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   bigint,
   real,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 export const foreclosure = pgTable('foreclosure', {
@@ -37,6 +38,19 @@ export const foreclosure = pgTable('foreclosure', {
     .notNull(),
   marking: text('marking').notNull(),
   remark: text('remark'),
+  updateAt: timestamp('updated_at').notNull().defaultNow(),
+  createAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const itemsImages = pgTable('itemsImages', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => nanoid()),
+  case_number: text('case_number').notNull(),
+  images_path: text('images_path')
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   updateAt: timestamp('updated_at').notNull().defaultNow(),
   createAt: timestamp('created_at').notNull().defaultNow(),
 });

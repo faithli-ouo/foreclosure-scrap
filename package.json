@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:gr": "drizzle-kit generate",
-    "db:mr": "drizzle-kit migrate"
+    "db:mr": "drizzle-kit migrate",
+    "db:pu": "drizzle-kit push"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -36,7 +37,8 @@
     "postgres": "^3.4.4",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
-    "selenium-webdriver": "^4.24.0"
+    "selenium-webdriver": "^4.24.0",
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

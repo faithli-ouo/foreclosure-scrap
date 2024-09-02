@@ -11,11 +11,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       useFactory: async (configService: ConfigService) => {
         const minioClient = new Minio.Client({
           endPoint: configService.get('MINIO_ENDPOINT'),
-          port: configService.get('MINIO_PORT'),
+          port: parseInt(configService.get('MINIO_PORT')),
           useSSL: false,
           accessKey: configService.get('MINIO_ACCESSKEY'),
           secretKey: configService.get('MINIO_SECRETKEY'),
         });
+        console.log(minioClient);
         return minioClient;
       },
       inject: [ConfigService],
