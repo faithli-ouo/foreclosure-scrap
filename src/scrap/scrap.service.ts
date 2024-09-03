@@ -66,8 +66,11 @@ export class ScrapService {
     }
   }
 
-  async goForeclosure(): Promise<void> {
+  async goInsidePage(pages_xpath: string): Promise<void> {
     try {
+      // Select the Page you wanna go
+      await driver.findElement(By.id(pages_xpath)).click();
+
       // Click on the element inside the first iframe
       await driver
         .findElement(
@@ -115,10 +118,23 @@ export class ScrapService {
     return total_info;
   }
 
-  async getAllForeclosurettableData(total_info: page_info): Promise<void> {
+  async getAllForeclosurettableData(
+    total_info: page_info,
+    scarp_pages_id: string,
+  ): Promise<void> {
     for (let page = 1; page <= total_info.total_page; page++) {
       console.log(`Page: ${page}`);
-      await this.getForeclosureTableData();
+      switch (scarp_pages_id) {
+        case 'saletype_1':
+          await this.getForeclosureTableData();
+          break;
+        case 'saletype_4':
+          await this.getForeclosureTableData();
+          break;
+        default:
+          break;
+      }
+
       console.log(`Page: ${page} Finish Scarping`);
 
       if (page !== total_info.total_page) {
@@ -311,7 +327,6 @@ export class ScrapService {
             break;
         }
       }
-      console.log(imageExist);
       await this.PGDataService.upsertForeclosureItem(rowData);
 
       if (imageExist) {
@@ -319,11 +334,10 @@ export class ScrapService {
         const bucketExist = await this.minio.findBucket(rowData.case_number);
 
         //If Exist Break the loop
-        if (bucketExist) {
-          console.log(`${rowData.case_number}' Images have been uploaded`);
-          continue;
+        if (!bucketExist) {
+          await this.scarp_images(rowData.case_number, row);
         }
-        await this.scarp_images(rowData.case_number, row);
+        console.log(`${rowData.case_number}' Images Scarped`);
       }
     }
   }
@@ -349,6 +363,7 @@ export class ScrapService {
 
     // Click the button
     await imageButton.click();
+
     try {
       // Store the original window handle
       const originalWindow = await driver.getWindowHandle();
@@ -376,11 +391,9 @@ export class ScrapService {
             ),
           );
           // Iterate over the located elements
-          for (const [i, image] of image_elements.entries()) {
+          for (const image of image_elements.entries()) {
             // Get the 'src' attribute of each image
             const imageSrc = await image.getAttribute('src');
-            console.log(imageSrc);
-            console.log(`Images - ${case_number}: ${i + 1} Upload`);
 
             const imagePath = await this.minio.fetchOpUploadImages(
               imageSrc,
@@ -405,6 +418,8 @@ export class ScrapService {
       } catch (e) {
         console.error(e);
       }
+
+      await this.PGDataService.postImagesPath(case_number, imagesPath);
 
       // Close the current window
       await driver.close();

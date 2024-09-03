@@ -7,8 +7,11 @@ import {
   bigint,
   real,
 } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { type InferSelectModel, type InferInsertModel, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+
+// type export
+export type postImages = InferInsertModel<typeof itemsImages>;
 
 export const foreclosure = pgTable('foreclosure', {
   id: text('id')
@@ -47,10 +50,7 @@ export const itemsImages = pgTable('itemsImages', {
     .primaryKey()
     .$defaultFn(() => nanoid()),
   case_number: text('case_number').notNull(),
-  images_path: text('images_path')
-    .array()
-    .notNull()
-    .default(sql`'{}'::text[]`),
+  images_path: text('images_path').array().notNull(),
   updateAt: timestamp('updated_at').notNull().defaultNow(),
   createAt: timestamp('created_at').notNull().defaultNow(),
 });

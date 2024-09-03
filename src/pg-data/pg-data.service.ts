@@ -2,10 +2,10 @@ import { Injectable, Inject } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from 'db/schema'; // Ensure this path is correct
 import { eq, and } from 'drizzle-orm';
-import { foreclosure_item_row } from 'src/scrap/scrap.service';
+import type { foreclosure_item_row } from 'src/scrap/scrap.service';
+import type { postImages } from 'db/schema';
 
 type DrizzleDB = PostgresJsDatabase<typeof schema>;
-
 @Injectable()
 export class PGDataService {
   constructor(@Inject('DRIZZLE_ORM') private readonly db: DrizzleDB) {}
@@ -40,9 +40,10 @@ export class PGDataService {
       const isDataUpdated = this.compareJsonSameKeys(res[0], rowData, [], true);
 
       //If Not Same Update Data
-      if (isDataUpdated) {
-        console.log(`update data`);
-        return await this.putForeclosureItem(res[0].id, rowData);
+      if (!isDataUpdated) {
+        console.log(`Data not same > Update Data`);
+        await this.putForeclosureItem(res[0].id, rowData);
+        return 'Update Finish';
       }
 
       //If Same Quit Function
@@ -69,6 +70,24 @@ export class PGDataService {
       .where(eq(schema.foreclosure.id, recordID))
       .returning({ updatedId: schema.foreclosure.id });
     return res[0].updatedId;
+  }
+
+  async postImagesPath(
+    case_number: postImages['case_number'],
+    imagesPath: postImages['images_path'],
+  ): Promise<void> {
+    try {
+      const res = await this.db
+        .insert(schema.itemsImages)
+        .values({
+          case_number: case_number,
+          images_path: imagesPath,
+        })
+        .returning({ insertId: schema.itemsImages.id });
+      console.log(`${case_number}: Images Path Incerted: ${res[0].insertId}`);
+    } catch (error) {
+      console.log(`Can't Incert Images Path: ${error}`);
+    }
   }
 
   //Compare Two Set of Object
