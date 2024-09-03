@@ -57,6 +57,27 @@
       "when": 1725299722713,
       "tag": "0007_panoramic_psynapse",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1725382626459,
+      "tag": "0008_majestic_richard_fisk",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1725384191888,
+      "tag": "0009_lonely_hellion",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1725386569693,
+      "tag": "0010_polite_cardiac",
+      "breakpoints": true
     }
   ]
 }

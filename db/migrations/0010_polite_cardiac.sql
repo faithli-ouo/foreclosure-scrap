@@ -1,0 +1,1 @@
+ALTER TABLE "bidprice" ADD COLUMN "price_diff" real;

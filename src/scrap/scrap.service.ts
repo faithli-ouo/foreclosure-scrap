@@ -3,6 +3,7 @@ import { Builder, By, until } from 'selenium-webdriver';
 import { DateTime } from 'luxon';
 import { PGDataService } from 'src/pg-data/pg-data.service';
 import { ObjectHandelService } from 'src/object-handel/object-handel.service';
+import type { postbidprice, postforeclosure, postshouldbuy } from 'db/schema';
 
 export type total_info = {
   total_page: number;
@@ -14,31 +15,6 @@ export type page_info = {
   total_page: number;
   total_record: number;
   current_page: number;
-};
-
-export type foreclosure_item_row = {
-  case_number: string;
-  type: string;
-  court: string;
-  year: number;
-  zhcode: string;
-  stock: string;
-  bid_date: Date;
-  bid_times: number;
-  country: string;
-  city: string;
-  address: string;
-  full_address: string;
-  ratio: string;
-  ping: number;
-  square_meter: number;
-  base_price: number;
-  total_base_price: number;
-  handover: string;
-  empty: string;
-  is_unregistered_building: boolean;
-  marking: string;
-  remark?: string;
 };
 
 //define selenium driver and the target url
@@ -118,7 +94,7 @@ export class ScrapService {
     return total_info;
   }
 
-  async getAllForeclosurettableData(
+  async getAllData(
     total_info: page_info,
     scarp_pages_id: string,
   ): Promise<void> {
@@ -129,7 +105,10 @@ export class ScrapService {
           await this.getForeclosureTableData();
           break;
         case 'saletype_4':
-          await this.getForeclosureTableData();
+          await this.getShouldbuyTableData();
+          break;
+        case 'saletype_5':
+          await this.getBidprice();
           break;
         default:
           break;
@@ -151,7 +130,7 @@ export class ScrapService {
     const rows = await driver.findElements(By.css('#tablecontext tbody tr'));
     for (const row of rows) {
       const rowCells = await row.findElements(By.css('td'));
-      let rowData: foreclosure_item_row = {
+      let rowData: postforeclosure = {
         case_number: '',
         type: '',
         court: '',
@@ -339,6 +318,359 @@ export class ScrapService {
         }
         console.log(`${rowData.case_number}' Images Scarped`);
       }
+    }
+  }
+
+  async getShouldbuyTableData(): Promise<void> {
+    await driver.wait(
+      until.elementLocated(By.css('#tablecontext tbody')),
+      10000,
+    );
+    const rows = await driver.findElements(By.css('#tablecontext tbody tr'));
+    for (const row of rows) {
+      const rowCells = await row.findElements(By.css('td'));
+      let rowData: postshouldbuy = {
+        case_number: '',
+        type: '',
+        court: '',
+        year: 0,
+        zhcode: '',
+        stock: '',
+        bid_date: new Date(0), // Unix epoch
+        country: '',
+        city: '',
+        address: '',
+        full_address: '',
+        ratio: '',
+        ping: 0,
+        square_meter: 0,
+        base_price: 0,
+        total_base_price: 0,
+        handover: '',
+        empty: '',
+        is_unregistered_building: false,
+        marking: '',
+        remark: '',
+      };
+      let rowNumber: string;
+      let imageExist = false;
+
+      for (let i = 0; i < rowCells.length; i++) {
+        const cellText = await rowCells[i].getText();
+        switch (i) {
+          case 0:
+            rowNumber = cellText;
+            console.log(rowNumber);
+            break;
+
+          case 1:
+            rowData = { ...rowData, court: cellText.replace('\n', '') };
+            break;
+
+          case 2:
+            // Split by '司'
+            const cell2_part1 = cellText.split('司');
+
+            // Split by '第'
+            const cell2_part2 = cell2_part1[1].split('第');
+
+            // Extract case number from cell2_part2[1] and handle cases where match might return null
+            const caseNumberMatch = cell2_part2[1].match(/\d+/);
+
+            // Split remaining part by '/'
+            const cell2_part3 = cell2_part2[1].split('(');
+
+            rowData = {
+              ...rowData,
+              year: parseInt(cell2_part1[0]),
+              zhcode: '司' + cell2_part2[0],
+              case_number: caseNumberMatch ? caseNumberMatch[0] : '',
+              stock: cell2_part3[1] ? cell2_part3[1].replace(')', '') : '',
+            };
+            break;
+
+          case 3:
+            const cell4_parts = cellText.split('\n');
+            const cell_date = cell4_parts[0].split('/');
+            rowData = {
+              ...rowData,
+              bid_date: new Date(
+                DateTime.fromSQL(
+                  `${parseInt(cell_date[0]) + 1911}-${cell_date[1]}-${cell_date[2]}`,
+                )
+                  .toUTC()
+                  .toISO(),
+              ),
+            };
+            break;
+
+          case 4:
+            const cell5_parts = cellText.split('\n');
+            rowData = {
+              ...rowData,
+              country: cell5_parts[0],
+              city: cell5_parts[1],
+            };
+            break;
+
+          case 5:
+            const cell6_parts = cellText.split('\n');
+            // Handle address
+            let cell6_part1 = cell6_parts[0].replace(' ', '');
+            if (cell6_part1.includes(rowData.country)) {
+              cell6_part1.replace(rowData.country, '');
+            }
+            if (cell6_part1.includes(rowData.city)) {
+              cell6_part1.replace(rowData.city, '');
+            }
+            if (cell6_part1.includes('保存')) {
+              cell6_part1 = cell6_part1.split('(')[0];
+            }
+
+            const cell6_part2 = cell6_parts[1];
+
+            const cell6_part2_1 = cell6_part2.split('坪(');
+            const cell6_part2_2 = cell6_part2_1[1].split(/ x | X /i);
+            const cell6_part3 = cell6_parts[2];
+
+            rowData = {
+              ...rowData,
+              is_unregistered_building: cell6_part1.includes('保存')
+                ? true
+                : false,
+              address: cell6_part1,
+              full_address: rowData.country + rowData.city + cell6_part1,
+              ping: parseFloat(cell6_part2_1[0]),
+              square_meter: parseFloat(
+                cell6_part2_2[0].replace('平方公尺)', ''),
+              ),
+              ratio: cell6_part2_2[1],
+              type: cell6_part3.includes('土地') ? 'land' : 'building',
+              base_price: cell6_part3.match(/[\d,]+/)
+                ? parseFloat(cell6_part3.match(/[\d,]+/)[0].replace(/,/g, ''))
+                : 0,
+            };
+            break;
+
+          case 6:
+            rowData = {
+              ...rowData,
+              total_base_price: parseFloat(cellText.replace(/,/g, '')),
+            };
+            break;
+
+          case 7:
+            rowData = {
+              ...rowData,
+              handover: cellText.trim(),
+            };
+            break;
+
+          case 8:
+            rowData = {
+              ...rowData,
+              empty: cellText.trim(),
+            };
+            break;
+
+          case 9:
+            rowData = {
+              ...rowData,
+              marking: cellText.trim(),
+            };
+            break;
+
+          case 10:
+            try {
+              await row.findElement(
+                By.xpath('.//td[@id="picTd"]//button[@title="查看照片"]'),
+              );
+              console.log(`Row: ${rowNumber} Images Exist`);
+              imageExist = true;
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (error) {}
+
+            break;
+
+          case 11:
+            rowData = {
+              ...rowData,
+              remark: cellText.trim(),
+            };
+            break;
+
+          default:
+            break;
+        }
+      }
+      await this.PGDataService.upsertShouldbuyItem(rowData);
+
+      if (imageExist) {
+        //Find Is Bucket Exist or Not
+        const bucketExist = await this.minio.findBucket(rowData.case_number);
+
+        //If Exist Break the loop
+        if (!bucketExist) {
+          await this.scarp_images(rowData.case_number, row);
+        }
+        console.log(`${rowData.case_number}' Images Scarped`);
+      }
+    }
+  }
+
+  async getBidprice(): Promise<void> {
+    await driver.wait(
+      until.elementLocated(By.css('#tablecontext tbody')),
+      10000,
+    );
+    const rows = await driver.findElements(By.css('#tablecontext tbody tr'));
+    for (const row of rows) {
+      const rowCells = await row.findElements(By.css('td'));
+      let rowData: postbidprice = {
+        case_number: '',
+        court: '',
+        year: 0,
+        zhcode: '',
+        stock: '',
+        bid_date: new Date(0), // Unix epoch
+        country: '',
+        city: '',
+        address: '',
+        full_address: '',
+        ratio: '',
+        ping: 0,
+        square_meter: 0,
+        item_bid_price: 0,
+        total_bid_price: 0,
+        final_total_bid_price: 0,
+        price_diff: 0.0,
+      };
+      let rowNumber: string;
+
+      for (let i = 0; i < rowCells.length; i++) {
+        const cellText = await rowCells[i].getText();
+        switch (i) {
+          case 0:
+            rowNumber = cellText;
+            console.log(rowNumber);
+            break;
+
+          case 1:
+            rowData = { ...rowData, court: cellText.replace('\n', '') };
+            break;
+
+          case 2:
+            // Split by '司'
+            const cell2_part1 = cellText.split('司');
+
+            // Split by '第'
+            const cell2_part2 = cell2_part1[1].split('第');
+
+            // Extract case number from cell2_part2[1] and handle cases where match might return null
+            const caseNumberMatch = cell2_part2[1].match(/\d+/);
+
+            // Split remaining part by '/'
+            const cell2_part3 = cell2_part2[1].split('(');
+
+            rowData = {
+              ...rowData,
+              year: parseInt(cell2_part1[0]),
+              zhcode: '司' + cell2_part2[0],
+              case_number: caseNumberMatch ? caseNumberMatch[0] : '',
+              stock: cell2_part3[1] ? cell2_part3[1].replace(')', '') : '',
+            };
+            break;
+
+          case 3:
+            const cell4_parts = cellText.split('\n');
+            const cell_date = cell4_parts[0].split('/');
+            rowData = {
+              ...rowData,
+              bid_date: new Date(
+                DateTime.fromSQL(
+                  `${parseInt(cell_date[0]) + 1911}-${cell_date[1]}-${cell_date[2]}`,
+                )
+                  .toUTC()
+                  .toISO(),
+              ),
+            };
+            break;
+
+          case 4:
+            const cell5_parts = cellText.split('\n');
+            rowData = {
+              ...rowData,
+              country: cell5_parts[0],
+              city: cell5_parts[1],
+            };
+            break;
+
+          case 5:
+            const cell6_parts = cellText.split('\n');
+            // Handle address
+            let cell6_part1 = cell6_parts[0].replace(' ', '');
+            if (cell6_part1.includes(rowData.country)) {
+              cell6_part1.replace(rowData.country, '');
+            }
+            if (cell6_part1.includes(rowData.city)) {
+              cell6_part1.replace(rowData.city, '');
+            }
+            if (cell6_part1.includes('保存')) {
+              cell6_part1 = cell6_part1.split('(')[0];
+            }
+
+            const cell6_part2 = cell6_parts[1];
+
+            const cell6_part2_1 = cell6_part2.split('坪(');
+            const cell6_part2_2 = cell6_part2_1[1].split(/ x | X /i);
+            const cell6_part3 = cell6_parts[2];
+
+            rowData = {
+              ...rowData,
+              address: cell6_part1,
+              full_address: rowData.country + rowData.city + cell6_part1,
+              ping: parseFloat(cell6_part2_1[0]),
+              square_meter: parseFloat(
+                cell6_part2_2[0].replace('平方公尺)', ''),
+              ),
+              ratio: cell6_part2_2[1],
+              item_bid_price: cell6_part3.match(/[\d,]+/)
+                ? parseFloat(cell6_part3.match(/[\d,]+/)[0].replace(/,/g, ''))
+                : 0,
+            };
+            break;
+
+          case 6:
+            rowData = {
+              ...rowData,
+              total_bid_price: parseFloat(cellText.replace(/,/g, '')),
+            };
+            break;
+
+          case 7:
+            rowData = {
+              ...rowData,
+              final_total_bid_price: parseFloat(cellText.replace(/,/g, '')),
+            };
+            break;
+
+          case 8:
+            rowData = {
+              ...rowData,
+              price_diff:
+                // eslint-disable-next-line prettier/prettier
+                ((rowData.final_total_bid_price - rowData.total_bid_price) /
+                  // eslint-disable-next-line prettier/prettier
+                  rowData.total_bid_price) +
+                1,
+            };
+            break;
+
+          default:
+            break;
+        }
+      }
+      await this.PGDataService.upsertBidprice(rowData);
     }
   }
 

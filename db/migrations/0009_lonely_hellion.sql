@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS "bidprice" (
+	"id" text PRIMARY KEY NOT NULL,
+	"case_number" text NOT NULL,
+	"court" text NOT NULL,
+	"year" integer NOT NULL,
+	"zhcode" text NOT NULL,
+	"stock" text NOT NULL,
+	"bid_date" timestamp NOT NULL,
+	"country" text NOT NULL,
+	"city" text NOT NULL,
+	"address" text NOT NULL,
+	"full_address" text NOT NULL,
+	"ratio" text NOT NULL,
+	"ping" integer NOT NULL,
+	"square_meter" real NOT NULL,
+	"item_bid_price" bigint NOT NULL,
+	"total_bid_price" bigint NOT NULL,
+	"final_total_bid_price" bigint NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);

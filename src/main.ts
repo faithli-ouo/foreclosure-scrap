@@ -19,19 +19,13 @@ async function bootstrap() {
   // Get the ScrapService
   const scrapService = app.get(ScrapService);
 
-  await scrapService.openBrowser();
-
   for (let index = 0; index < scarp_pages.length; index++) {
+    await scrapService.openBrowser();
     const id = scarp_pages[index].id;
+    console.log(`Start Scarp ${scarp_pages[index].name}`);
     await scrapService.goInsidePage(id);
     const total_info = await scrapService.getPageInfo();
-    switch (id) {
-      case 'saletype_1':
-        await scrapService.getAllForeclosurettableData(total_info);
-        break;
-      default:
-        break;
-    }
+    await scrapService.getAllData(total_info, id);
   }
 
   scrapService.closeDriver();
