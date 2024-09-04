@@ -2,7 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { drizzle } from 'drizzle-orm/postgres-js';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-import postgres = require('postgres');
+import postgres from 'postgres';
 
 @Global()
 @Module({

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Builder, By, until } from 'selenium-webdriver';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import firefox = require('selenium-webdriver/firefox');
 import { DateTime } from 'luxon';
 import { PGDataService } from 'src/pg-data/pg-data.service';
 import { ObjectHandelService } from 'src/object-handel/object-handel.service';
@@ -18,6 +20,9 @@ export type page_info = {
 };
 
 //define selenium driver and the target url
+const firefoxOptions = new firefox.Options();
+firefoxOptions.addArguments('-headless');
+firefoxOptions.setBinary('/usr/bin/firefox');
 
 const site_url = 'https://aomp109.judicial.gov.tw/judbp/wkw/WHD1A02.htm';
 
@@ -29,9 +34,12 @@ export class ScrapService {
   ) {}
 
   //1. Init Selenium Browser and Go To Site Url
-  async openBrowser(): Promise<void> {
+  async openBrowser(): Promise<any> {
     try {
-      const driver = new Builder().forBrowser('firefox').build();
+      const driver = new Builder()
+        .forBrowser('firefox')
+        .setFirefoxOptions(firefoxOptions)
+        .build();
 
       // Navigate to the target website
       await driver.get(site_url);
@@ -45,10 +53,13 @@ export class ScrapService {
     }
   }
 
-  async goInsidePage(pages_xpath: string, driver: any): Promise<void> {
+  async goInsidePage(
+    scrap_page: { id: string; name: string },
+    driver: any,
+  ): Promise<void> {
     try {
       // Select the Page you wanna go
-      await driver.findElement(By.id(pages_xpath)).click();
+      await driver.findElement(By.id(scrap_page.id)).click();
 
       // Click on the element inside the first iframe
       await driver
@@ -67,7 +78,7 @@ export class ScrapService {
 
       // Switch to the second iframe
       await driver.switchTo().frame('v2');
-      console.log('Arrived Foreclosure Page');
+      console.log(`Start Scarp ${scrap_page.name}`);
     } catch (error) {
       console.log(error);
     }
@@ -663,10 +674,12 @@ export class ScrapService {
               ...rowData,
               price_diff:
                 // eslint-disable-next-line prettier/prettier
-                ((rowData.final_total_bid_price - rowData.total_bid_price) /
-                  // eslint-disable-next-line prettier/prettier
+                parseFloat((((rowData.final_total_bid_price - rowData.total_bid_price) /
+                      // eslint-disable-next-line prettier/prettier
                   rowData.total_bid_price) +
-                1,
+                    1
+                  ).toFixed(3),
+                ),
             };
             break;
 

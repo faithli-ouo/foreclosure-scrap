@@ -27,6 +27,8 @@
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/schedule": "^4.1.0",
+    "@types/selenium-webdriver": "^4.1.26",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
     "luxon": "^3.5.0",
