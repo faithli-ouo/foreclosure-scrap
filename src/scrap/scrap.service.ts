@@ -18,7 +18,7 @@ export type page_info = {
 };
 
 //define selenium driver and the target url
-const driver = new Builder().forBrowser('firefox').build();
+
 const site_url = 'https://aomp109.judicial.gov.tw/judbp/wkw/WHD1A02.htm';
 
 @Injectable()
@@ -31,18 +31,21 @@ export class ScrapService {
   //1. Init Selenium Browser and Go To Site Url
   async openBrowser(): Promise<void> {
     try {
+      const driver = new Builder().forBrowser('firefox').build();
+
       // Navigate to the target website
       await driver.get(site_url);
       // Switch to the first iframe
       await driver.switchTo().frame('v1');
 
       console.log('Browser Initialized');
+      return driver;
     } catch (error) {
       console.log(error);
     }
   }
 
-  async goInsidePage(pages_xpath: string): Promise<void> {
+  async goInsidePage(pages_xpath: string, driver: any): Promise<void> {
     try {
       // Select the Page you wanna go
       await driver.findElement(By.id(pages_xpath)).click();
@@ -71,7 +74,7 @@ export class ScrapService {
   }
 
   //2. Get The Total Info And Page Info Of the Site
-  async getPageInfo(): Promise<page_info> {
+  async getPageInfo(driver): Promise<page_info> {
     const total_recordText: string = await driver
       .wait(until.elementLocated(By.id('total_info')))
       .getText();
@@ -97,18 +100,19 @@ export class ScrapService {
   async getAllData(
     total_info: page_info,
     scarp_pages_id: string,
+    driver: any,
   ): Promise<void> {
     for (let page = 1; page <= total_info.total_page; page++) {
       console.log(`Page: ${page}`);
       switch (scarp_pages_id) {
         case 'saletype_1':
-          await this.getForeclosureTableData();
+          await this.getForeclosureTableData(driver);
           break;
         case 'saletype_4':
-          await this.getShouldbuyTableData();
+          await this.getShouldbuyTableData(driver);
           break;
         case 'saletype_5':
-          await this.getBidprice();
+          await this.getBidprice(driver);
           break;
         default:
           break;
@@ -117,12 +121,12 @@ export class ScrapService {
       console.log(`Page: ${page} Finish Scarping`);
 
       if (page !== total_info.total_page) {
-        await this.nextpage();
+        await this.nextpage(driver);
       }
     }
   }
 
-  async getForeclosureTableData(): Promise<void> {
+  async getForeclosureTableData(driver): Promise<void> {
     await driver.wait(
       until.elementLocated(By.css('#tablecontext tbody')),
       10000,
@@ -212,7 +216,7 @@ export class ScrapService {
             rowData = {
               ...rowData,
               country: cell5_parts[0],
-              city: cell5_parts[1],
+              city: cell5_parts[1] ?? '',
             };
             break;
 
@@ -314,14 +318,14 @@ export class ScrapService {
 
         //If Exist Break the loop
         if (!bucketExist) {
-          await this.scarp_images(rowData.case_number, row);
+          await this.scarp_images(rowData.case_number, row, driver);
         }
         console.log(`${rowData.case_number}' Images Scarped`);
       }
     }
   }
 
-  async getShouldbuyTableData(): Promise<void> {
+  async getShouldbuyTableData(driver): Promise<void> {
     await driver.wait(
       until.elementLocated(By.css('#tablecontext tbody')),
       10000,
@@ -409,7 +413,7 @@ export class ScrapService {
             rowData = {
               ...rowData,
               country: cell5_parts[0],
-              city: cell5_parts[1],
+              city: cell5_parts[1] ?? '',
             };
             break;
 
@@ -511,14 +515,14 @@ export class ScrapService {
 
         //If Exist Break the loop
         if (!bucketExist) {
-          await this.scarp_images(rowData.case_number, row);
+          await this.scarp_images(rowData.case_number, row, driver);
         }
         console.log(`${rowData.case_number}' Images Scarped`);
       }
     }
   }
 
-  async getBidprice(): Promise<void> {
+  async getBidprice(driver): Promise<void> {
     await driver.wait(
       until.elementLocated(By.css('#tablecontext tbody')),
       10000,
@@ -601,7 +605,7 @@ export class ScrapService {
             rowData = {
               ...rowData,
               country: cell5_parts[0],
-              city: cell5_parts[1],
+              city: cell5_parts[1] ?? '',
             };
             break;
 
@@ -674,7 +678,11 @@ export class ScrapService {
     }
   }
 
-  async scarp_images(case_number: string, row: any): Promise<void> {
+  async scarp_images(
+    case_number: string,
+    row: any,
+    driver: any,
+  ): Promise<void> {
     let imagesPath: string[] | [] = [];
 
     const imageButton = await row.findElement(
@@ -700,7 +708,7 @@ export class ScrapService {
       // Store the original window handle
       const originalWindow = await driver.getWindowHandle();
       // Switch to the new window
-      await this.switchWindow();
+      await this.switchWindow(driver);
       // Switch to the 'v1' frame and scrape images
       const iframe = await driver.wait(until.elementLocated(By.name('v1')));
       await driver.switchTo().frame(iframe);
@@ -712,7 +720,7 @@ export class ScrapService {
           2000,
         );
         await driver.sleep(1000);
-        const total_info = await this.getPageInfo();
+        const total_info = await this.getPageInfo(driver);
         console.log('Images - ' + case_number + ': ' + total_info.total_record);
 
         for (let page = 1; page <= total_info.total_page; page++) {
@@ -723,9 +731,10 @@ export class ScrapService {
             ),
           );
           // Iterate over the located elements
-          for (const image of image_elements.entries()) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          for (const [index, imageElement] of image_elements.entries()) {
             // Get the 'src' attribute of each image
-            const imageSrc = await image.getAttribute('src');
+            const imageSrc = await imageElement.getAttribute('src');
 
             const imagePath = await this.minio.fetchOpUploadImages(
               imageSrc,
@@ -736,7 +745,7 @@ export class ScrapService {
           }
 
           if (page !== total_info.total_page) {
-            await this.nextpage();
+            await this.nextpage(driver);
             await driver.wait(
               until.elementLocated(By.css('#tablecontext tbody')),
               2000,
@@ -772,18 +781,18 @@ export class ScrapService {
     }
   }
 
-  closeDriver(): void {
+  closeDriver(driver): void {
     driver.close();
   }
 
-  async nextpage(): Promise<void> {
+  async nextpage(driver): Promise<void> {
     const nextPage_btn = await driver.wait(
       until.elementLocated(By.css('.fa-caret-right')),
     );
     nextPage_btn.click();
   }
 
-  async switchWindow() {
+  async switchWindow(driver) {
     try {
       const currentWindowHandle = await driver.getWindowHandle();
       const allWindowHandles = await driver.getAllWindowHandles();

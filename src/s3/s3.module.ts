@@ -16,7 +16,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
           accessKey: configService.get('MINIO_ACCESSKEY'),
           secretKey: configService.get('MINIO_SECRETKEY'),
         });
-        console.log(minioClient);
         return minioClient;
       },
       inject: [ConfigService],

@@ -54,7 +54,9 @@ export class ObjectHandelService {
     // Get the image as a buffer
     const imageBuffer: ArrayBuffer = await response.arrayBuffer();
     // Convert to WebP using sharp
-    const webpBuffer: Buffer = await sharp(imageBuffer).webp().toBuffer();
+    const webpBuffer: Buffer = await sharp(imageBuffer)
+      .webp({ quality: 60 })
+      .toBuffer();
 
     await this.S3.putObject(
       bucketName,
