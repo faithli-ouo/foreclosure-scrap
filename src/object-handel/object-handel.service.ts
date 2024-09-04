@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import * as sharp from 'sharp';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sharp = require('sharp');
 
 const BucketPolicy = {
   Version: '2012-10-17',
