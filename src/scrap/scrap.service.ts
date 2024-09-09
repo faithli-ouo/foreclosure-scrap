@@ -214,6 +214,7 @@ export class ScrapService {
               bid_date: new Date(
                 DateTime.fromSQL(
                   `${parseInt(cell_date[0]) + 1911}-${cell_date[1]}-${cell_date[2]}`,
+                  { zone: 'UTC+8' },
                 )
                   .toUTC()
                   .toISO(),
