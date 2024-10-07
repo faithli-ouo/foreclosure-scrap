@@ -1,1 +1,0 @@
-ALTER TABLE "foreclosure" ALTER COLUMN "bid_date" SET DATA TYPE timestamp with time zone;
